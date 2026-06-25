@@ -27,6 +27,7 @@ export class ProductController {
     @Query('isFeatured') isFeatured?: string,
     @Query('brandId') brandId?: string,
     @Query('categoryId') categoryId?: string,
+    @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     return this.productService.findAll({
@@ -34,6 +35,7 @@ export class ProductController {
       isFeatured,
       brandId,
       categoryId,
+      page,
       limit,
     });
   }

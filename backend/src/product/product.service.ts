@@ -38,27 +38,41 @@ export class ProductService {
     isFeatured?: string;
     brandId?: string;
     categoryId?: string;
+    page?: string;
     limit?: string;
   }) {
-    return this.prisma.product.findMany({
-      where: {
-        isActive: true,
-        ...(query.search && {
-          name: { contains: query.search, mode: 'insensitive' },
-        }),
-        ...(query.isFeatured === 'true' && { isFeatured: true }),
-        ...(query.brandId && { brandId: query.brandId }),
-        ...(query.categoryId && { categoryId: query.categoryId }),
-      },
-      include: {
-        brand: true,
-        category: true,
-        variants: true,
-        images: true,
-      },
-      orderBy: { createdAt: 'desc' },
-      take: query.limit ? parseInt(query.limit) : undefined,
-    });
+    const page = query.page ? parseInt(query.page) : 1;
+    const limit = query.limit ? parseInt(query.limit) : 12;
+    const skip = (page - 1) * limit;
+
+    const where = {
+      isActive: true,
+      ...(query.search && {
+        name: { contains: query.search, mode: 'insensitive' as const },
+      }),
+      ...(query.isFeatured === 'true' && { isFeatured: true }),
+      ...(query.brandId && { brandId: query.brandId }),
+      ...(query.categoryId && { categoryId: query.categoryId }),
+    };
+
+    const [items, total] = await Promise.all([
+      this.prisma.product.findMany({
+        where,
+        include: { brand: true, category: true, variants: true, images: true },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.product.count({ where }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
   }
 
   async findOne(id: string) {
