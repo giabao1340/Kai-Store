@@ -7,6 +7,7 @@ import "./globals.css";
 
 import MenuBar from "@/components/layout/menu-bar/MenuBar";
 import Footer from "@/components/layout/footer/Footer";
+import { Suspense } from "react";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -21,7 +22,9 @@ export default function RootLayout({
   return (
     <html lang="vi" className={cn("font-sans", inter.variable)}>
       <body className="flex min-h-screen flex-col">
-        <MenuBar />
+        <Suspense fallback={null}>
+          <MenuBar />
+        </Suspense>
 
         {/* Nội dung trang */}
         <main className="flex-1">{children}</main>
