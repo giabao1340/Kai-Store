@@ -2,16 +2,36 @@ import ProductList from "@/components/features/product/product-list";
 import BannerLayout from "@/components/layout/banner/banner-layout";
 
 // Hàm fetch phía server — không cần axios
+// async function getFeaturedProducts() {
+//   try {
+//     const res = await fetch(
+//       `${process.env.NEXT_PUBLIC_API_URL}/products?isFeatured=true&limit=8`,
+//       { next: { revalidate: 60 } }, // cache 60 giây
+//     );
+//     if (!res.ok) return [];
+//     return res.json();
+//   } catch {
+//     return [];
+//   }
+// }
 async function getFeaturedProducts() {
   try {
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/products?isFeatured=true&limit=8`,
-      { next: { revalidate: 60 } }, // cache 60 giây
+      { next: { revalidate: 60 } },
     );
-    if (!res.ok) return [];
-    return res.json();
+
+    if (!res.ok) {
+      return {
+        items: [],
+      };
+    }
+
+    return await res.json();
   } catch {
-    return [];
+    return {
+      items: [],
+    };
   }
 }
 
@@ -21,10 +41,17 @@ async function getLatestProducts() {
       `${process.env.NEXT_PUBLIC_API_URL}/products?limit=8`,
       { next: { revalidate: 60 } },
     );
-    if (!res.ok) return [];
-    return res.json();
+    if (!res.ok) {
+      return {
+        items: [],
+      };
+    }
+
+    return await res.json();
   } catch {
-    return [];
+    return {
+      items: [],
+    };
   }
 }
 
