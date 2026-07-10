@@ -11,16 +11,21 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   // main.ts
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'https://kai-store-psi.vercel.app', // ← thêm domain Vercel
-    ],
+    origin: (origin, callback) => {
+      if (
+        !origin ||
+        origin === 'http://localhost:3000' ||
+        origin.endsWith('.vercel.app')
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   });
 
   await app.listen(process.env.PORT || 3001);
-  process.env.PORT
-    ? console.log(`Server is running on port ${process.env.PORT}`)
-    : console.log(`Server is running on port 3001`);
+  console.log('🚀 Server running on http://localhost:3001');
 }
 bootstrap();
