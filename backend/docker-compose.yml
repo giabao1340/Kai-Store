@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: kai_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: kai_store
+      POSTGRES_USER: kai_user
+      POSTGRES_PASSWORD: "123456"
+    ports:
+      - "5432:5432"
+    volumes:
+      - kai_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  kai_postgres_data:

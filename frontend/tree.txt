@@ -1,0 +1,89 @@
+frontend/
+├── public/                         # Static files (ảnh, font, icon...)
+│
+├── src/
+│   ├── app/                        # App Router — mỗi folder = 1 route
+│   │   ├── layout.tsx              # Root layout (áp dụng cho toàn app)
+│   │   ├── page.tsx                # Trang chủ "/"
+│   │   ├── loading.tsx             # Loading UI toàn app
+│   │   ├── error.tsx               # Error UI toàn app
+│   │   │
+│   │   ├── (auth)/                 # Route group — không tạo URL segment
+│   │   │   ├── login/
+│   │   │   │   └── page.tsx        # "/login"
+│   │   │   └── register/
+│   │   │       └── page.tsx        # "/register"
+│   │   │
+│   │   ├── (shop)/                 # Route group cho shop
+│   │   │   ├── products/
+│   │   │   │   ├── page.tsx        # "/products"
+│   │   │   │   └── [id]/
+│   │   │   │       └── page.tsx    # "/products/:id"
+│   │   │   ├── cart/
+│   │   │   │   └── page.tsx        # "/cart"
+│   │   │   └── checkout/
+│   │   │       └── page.tsx        # "/checkout"
+│   │   │
+│   │   ├── (account)/              # Route group cho tài khoản
+│   │   │   ├── profile/
+│   │   │   │   └── page.tsx        # "/profile"
+│   │   │   └── orders/
+│   │   │       ├── page.tsx        # "/orders"
+│   │   │       └── [id]/
+│   │   │           └── page.tsx    # "/orders/:id"
+│   │   │
+│   │   └── (admin)/                # Route group cho admin
+│   │       ├── layout.tsx          # Layout riêng cho admin
+│   │       └── dashboard/
+│   │           ├── page.tsx        # "/dashboard"
+│   │           ├── products/
+│   │           │   └── page.tsx    # "/dashboard/products"
+│   │           ├── orders/
+│   │           │   └── page.tsx    # "/dashboard/orders"
+│   │           └── coupons/
+│   │               └── page.tsx    # "/dashboard/coupons"
+│   │
+│   ├── components/                 # Reusable components
+│   │   ├── ui/                     # Component cơ bản (Button, Input, Modal...)
+│   │   │   ├── button.tsx
+│   │   │   ├── input.tsx
+│   │   │   └── modal.tsx
+│   │   ├── layout/                 # Layout components
+│   │   │   ├── header.tsx
+│   │   │   ├── footer.tsx
+│   │   │   └── sidebar.tsx
+│   │   └── features/               # Component theo tính năng
+│   │       ├── product/
+│   │       │   ├── product-card.tsx
+│   │       │   └── product-list.tsx
+│   │       ├── cart/
+│   │       │   └── cart-item.tsx
+│   │       └── order/
+│   │           └── order-card.tsx
+│   │
+│   ├── lib/                        # Utilities & helpers
+│   │   ├── axios.ts                # Axios instance với baseURL, interceptors
+│   │   └── utils.ts                # Helper functions
+│   │
+│   ├── hooks/                      # Custom React hooks
+│   │   ├── use-auth.ts
+│   │   └── use-cart.ts
+│   │
+│   ├── stores/                     # State management (Zustand)
+│   │   ├── auth.store.ts
+│   │   └── cart.store.ts
+│   │
+│   ├── services/                   # Gọi API
+│   │   ├── auth.service.ts
+│   │   ├── product.service.ts
+│   │   └── order.service.ts
+│   │
+│   └── types/                      # TypeScript interfaces
+│       ├── product.type.ts
+│       ├── order.type.ts
+│       └── user.type.ts
+│
+├── .env.local                      # Biến môi trường local
+├── next.config.ts
+├── tailwind.config.ts
+└── package.json
