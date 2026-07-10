@@ -102,6 +102,11 @@ export class ProductService {
 
   async remove(id: string) {
     await this.findOne(id);
+    const hasVariants = await this.prisma.productVariant.findFirst({
+      where: { productId: id },
+    });
+    if (hasVariants)
+      throw new ConflictException('Không thể xóa product có variants');
     return this.prisma.product.delete({ where: { id } });
   }
 }

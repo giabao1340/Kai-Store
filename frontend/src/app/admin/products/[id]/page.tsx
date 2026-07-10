@@ -35,16 +35,16 @@ export default function EditProductPage() {
     }
   };
 
-  const handleDeleteProduct = async () => {
-    if (!confirm("Xóa sản phẩm này? Hành động không thể hoàn tác.")) return;
-    try {
-      await productAdminService.remove(id);
-      toast.success("Đã xóa sản phẩm");
-      router.push("/admin/products");
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message ?? "Không thể xóa sản phẩm");
-    }
-  };
+  // const handleDeleteProduct = async () => {
+  //   if (!confirm("Xóa sản phẩm này? Hành động không thể hoàn tác.")) return;
+  //   try {
+  //     await productAdminService.remove(id);
+  //     toast.success("Đã xóa sản phẩm");
+  //     router.push("/admin/products");
+  //   } catch (error: any) {
+  //     toast.error(error?.response?.data?.message ?? "Không thể xóa sản phẩm");
+  //   }
+  // };
 
   if (isLoading) {
     return (
@@ -71,7 +71,7 @@ export default function EditProductPage() {
           <h1 className="text-lg font-semibold">{product.name}</h1>
         </div>
 
-        <Button
+        {/* <Button
           onClick={handleDeleteProduct}
           variant="outline"
           size="sm"
@@ -79,7 +79,7 @@ export default function EditProductPage() {
         >
           <Trash2 className="w-3.5 h-3.5" />
           Xóa sản phẩm
-        </Button>
+        </Button> */}
       </div>
 
       {/* Thông tin cơ bản */}
