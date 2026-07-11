@@ -2,26 +2,19 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
 import api from "@/services/api";
 
-// VietQR public API — miễn phí, không cần key
-// Docs: https://vietqr.io/danh-sach-api/tao-ma-qr/
-const BANK_ID = "vietcombank"; // Mã ngân hàng của bạn
-const ACCOUNT_NO = "1031798735"; // Số tài khoản của bạn
-const ACCOUNT_NAME = "LUONG GIA BAO"; // Tên tài khoản
+const BANK_ID = process.env.NEXT_PUBLIC_BANK_ID ?? "VCB";
+const ACCOUNT_NO = process.env.NEXT_PUBLIC_ACCOUNT_NO ?? "";
+const ACCOUNT_NAME = process.env.NEXT_PUBLIC_ACCOUNT_NAME ?? "KAI STORE";
 
 interface VietQRProps {
   orderId: string;
   amount: number;
   onPaymentSuccess: () => void;
-}
-interface OrderResponse {
-  payment?: {
-    status: "PENDING" | "PAID" | "FAILED";
-  };
 }
 
 export default function VietQR({
@@ -29,27 +22,24 @@ export default function VietQR({
   amount,
   onPaymentSuccess,
 }: VietQRProps) {
-  const [isChecking, setIsChecking] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
+  const [isPaid, setIsPaid] = useState(false);
+  const [attempts, setAttempts] = useState(0);
+  const MAX_ATTEMPTS = 60; // 5 phút
 
-  // Nội dung chuyển khoản là mã đơn hàng
   const description = `KAI ${orderId.slice(-8).toUpperCase()}`;
 
-  // Generate QR URL từ VietQR
   const qrUrl =
     `https://img.vietqr.io/image/${BANK_ID}-${ACCOUNT_NO}-compact2.png` +
     `?amount=${amount}` +
     `&addInfo=${encodeURIComponent(description)}` +
     `&accountName=${encodeURIComponent(ACCOUNT_NAME)}`;
 
-  // Polling check payment mỗi 5 giây
   useEffect(() => {
-    let attempts = 0;
-    const MAX_ATTEMPTS = 60; // polling tối đa 5 phút
-
     const interval = setInterval(async () => {
-      attempts++;
-      if (attempts > MAX_ATTEMPTS) {
+      if (attempts >= MAX_ATTEMPTS) {
         clearInterval(interval);
+        setIsChecking(false);
         return;
       }
 
@@ -62,17 +52,42 @@ export default function VietQR({
 
         if (res.isPaid) {
           clearInterval(interval);
-          onPaymentSuccess();
+          setIsPaid(true);
+          setIsChecking(false);
+
+          // Đợi 1.5s để hiện animation success rồi mới redirect
+          setTimeout(() => {
+            onPaymentSuccess();
+          }, 1500);
         }
-      } catch {}
-    }, 5000); // check mỗi 5 giây
+      } catch (error) {
+        console.error("Error checking payment status:", error);
+      }
+
+      setAttempts((prev) => prev + 1);
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, [orderId]);
+  }, [orderId, attempts]);
+
+  // Hiện màn hình thành công
+  if (isPaid) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-8">
+        <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center">
+          <CheckCircle className="w-8 h-8 text-green-500" />
+        </div>
+        <p className="text-lg font-semibold text-gray-900">
+          Thanh toán thành công!
+        </p>
+        <p className="text-sm text-gray-400">Đang chuyển đến đơn hàng...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="text-center space-y-2">
+      <div className="text-center space-y-1">
         <h3 className="font-medium text-gray-900">Quét mã QR để thanh toán</h3>
         <p className="text-sm text-gray-400">
           Dùng app ngân hàng quét mã bên dưới
@@ -88,33 +103,30 @@ export default function VietQR({
             width={220}
             height={220}
             className="rounded-xl"
+            unoptimized // ← ảnh dynamic từ API
           />
         </div>
       </div>
 
-      <p className="text-center text-sm text-gray-400">
-        Please scan the QR code with your banking app
-      </p>
-
       {/* Thông tin chuyển khoản */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-gray-50 rounded-xl p-4">
-          <p className="text-xs text-gray-400 mb-1">Account number</p>
+        <div className="bg-gray-50 rounded-xl p-3">
+          <p className="text-xs text-gray-400 mb-1">Số tài khoản</p>
           <p className="font-semibold text-sm">{ACCOUNT_NO}</p>
         </div>
-        <div className="bg-gray-50 rounded-xl p-4">
-          <p className="text-xs text-gray-400 mb-1">Account holder</p>
+        <div className="bg-gray-50 rounded-xl p-3">
+          <p className="text-xs text-gray-400 mb-1">Chủ tài khoản</p>
           <p className="font-semibold text-sm">{ACCOUNT_NAME}</p>
         </div>
-        <div className="bg-gray-50 rounded-xl p-4">
-          <p className="text-xs text-gray-400 mb-1">Amount</p>
+        <div className="bg-gray-50 rounded-xl p-3">
+          <p className="text-xs text-gray-400 mb-1">Số tiền</p>
           <p className="font-semibold text-sm text-blue-600">
             {formatPrice(amount)}
           </p>
         </div>
-        <div className="bg-gray-50 rounded-xl p-4">
+        <div className="bg-gray-50 rounded-xl p-3">
           <p className="text-xs text-gray-400 mb-1">Nội dung CK</p>
-          <p className="font-semibold text-sm">{description}</p>
+          <p className="font-semibold text-sm font-mono">{description}</p>
         </div>
       </div>
 
@@ -130,13 +142,33 @@ export default function VietQR({
             )
           }
         >
-          Open payment link
+          Mở link thanh toán
         </Button>
 
-        <div className="flex items-center gap-2 text-sm text-blue-500">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          <span>Checking payment...</span>
-        </div>
+        {isChecking && (
+          <div className="flex items-center gap-2 text-sm text-blue-500">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>
+              Đang chờ thanh toán... (
+              {Math.floor(((MAX_ATTEMPTS - attempts) * 5) / 60)} phút còn lại)
+            </span>
+          </div>
+        )}
+
+        {!isChecking && !isPaid && (
+          <p className="text-sm text-red-400">
+            Hết thời gian chờ. Vui lòng{" "}
+            <button
+              className="underline"
+              onClick={() => {
+                setAttempts(0);
+                setIsChecking(true);
+              }}
+            >
+              thử lại
+            </button>
+          </p>
+        )}
       </div>
     </div>
   );
