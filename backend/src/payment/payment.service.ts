@@ -16,7 +16,7 @@ export class PaymentService {
           gateway: "MBBank",
           transactionDate: "2026-07-10 10:00:00",
           accountNumber: "0123456789",
-          content: "KAI A1B2C3D4 chuyen khoan",  ← nội dung CK
+          content: "KAI 5U7LBNRL chuyen khoan",  ← nội dung CK
           transferType: "in",                      ← tiền vào
           transferAmount: 2800000,
           referenceCode: "FT26191234567",

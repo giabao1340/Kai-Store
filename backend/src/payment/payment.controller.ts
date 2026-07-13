@@ -19,16 +19,23 @@ export class PaymentController {
 
   // SePay gọi endpoint này khi có giao dịch mới
   @Post('webhook/sepay')
-  @HttpCode(200) // SePay cần nhận 200 mới không retry
+  @HttpCode(200)
   async handleSepayWebhook(
     @Body() body: any,
-    @Headers('apikey') apiKey: string,
+    @Headers('authorization') authorization: string,
   ) {
-    this.logger.log('SePay webhook received:', JSON.stringify(body));
+    // Log để debug
+    this.logger.log('Authorization header:', authorization);
+    this.logger.log('Expected key:', process.env.SEPAY_WEBHOOK_API_KEY);
 
-    // Verify API key từ SePay
+    const apiKey = authorization?.replace('Apikey ', '').trim();
+    this.logger.log('Extracted key:', apiKey);
+    this.logger.log(
+      'Keys match:',
+      apiKey === process.env.SEPAY_WEBHOOK_API_KEY,
+    );
+
     if (apiKey !== process.env.SEPAY_WEBHOOK_API_KEY) {
-      this.logger.warn('Invalid API key:', apiKey);
       throw new UnauthorizedException('Invalid API key');
     }
 
