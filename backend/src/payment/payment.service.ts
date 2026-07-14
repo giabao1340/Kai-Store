@@ -16,7 +16,7 @@ export class PaymentService {
           gateway: "MBBank",
           transactionDate: "2026-07-10 10:00:00",
           accountNumber: "0123456789",
-          content: "KAI 5U7LBNRL chuyen khoan",  ← nội dung CK
+          content: "SEVQR 5U7LBNRL chuyen khoan",  ← nội dung CK
           transferType: "in",                      ← tiền vào
           transferAmount: 2800000,
           referenceCode: "FT26191234567",
@@ -31,12 +31,12 @@ export class PaymentService {
         return { success: true, message: 'Skipped outgoing transaction' };
       }
 
-      // Parse nội dung chuyển khoản — format: "KAI XXXXXXXX"
+      // Parse nội dung chuyển khoản — format: "SEVQR XXXXXXXX"
       const upperContent = (content ?? '').toUpperCase();
-      const match = upperContent.match(/KAI\s+([A-Z0-9]{8})/);
+      const match = upperContent.match(/SEVQR\s+([A-Z0-9]{8})/);
 
       if (!match) {
-        this.logger.warn('No KAI order code in content:', content);
+        this.logger.warn('No SEVQR order code in content:', content);
         return { success: true, message: 'No order code found' };
       }
 

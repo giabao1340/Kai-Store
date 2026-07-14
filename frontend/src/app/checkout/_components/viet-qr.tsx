@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
 import api from "@/services/api";
 
-const BANK_ID = process.env.NEXT_PUBLIC_BANK_ID ?? "VCB";
+const BANK_ID = process.env.NEXT_PUBLIC_BANK_ID ?? "ICB";
 const ACCOUNT_NO = process.env.NEXT_PUBLIC_ACCOUNT_NO ?? "";
 const ACCOUNT_NAME = process.env.NEXT_PUBLIC_ACCOUNT_NAME ?? "KAI STORE";
 
@@ -27,7 +27,7 @@ export default function VietQR({
   const [attempts, setAttempts] = useState(0);
   const MAX_ATTEMPTS = 60; // 5 phút
 
-  const description = `KAI ${orderId.slice(-8).toUpperCase()}`;
+  const description = `SEVQR ${orderId.slice(-8).toUpperCase()}`;
 
   const qrUrl =
     `https://img.vietqr.io/image/${BANK_ID}-${ACCOUNT_NO}-compact2.png` +
