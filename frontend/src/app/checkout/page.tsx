@@ -85,9 +85,19 @@ export default function CheckoutPage() {
 
     setIsSubmitting(true);
     try {
-      // ← Lưu địa chỉ nếu user tick checkbox
+      // ← Chỉ lưu địa chỉ khi showManual + shouldSaveAddress
       if (shouldSaveAddress) {
-        try {
+        // Kiểm tra xem địa chỉ này đã tồn tại chưa (tránh duplicate)
+        const existingAddresses = await userService.getAddresses();
+        const isDuplicate = existingAddresses.some(
+          (addr) =>
+            addr.street === values.snapStreet &&
+            addr.province === values.snapProvince &&
+            addr.district === values.snapDistrict &&
+            addr.ward === values.snapWard,
+        );
+
+        if (!isDuplicate) {
           await userService.createAddress({
             fullName: values.snapFullName,
             phone: values.snapPhone,
@@ -95,10 +105,8 @@ export default function CheckoutPage() {
             ward: values.snapWard,
             district: values.snapDistrict,
             province: values.snapProvince,
-            isDefault: true, // địa chỉ đầu tiên → set default luôn
+            isDefault: existingAddresses.length === 0, // default nếu là địa chỉ đầu tiên
           });
-        } catch {
-          // Không block việc đặt hàng nếu lưu địa chỉ thất bại
         }
       }
 

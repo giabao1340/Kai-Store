@@ -35,20 +35,6 @@ export default function DeliveryForm({
     fetchAddresses();
   }, []);
 
-  const fetchAddresses = async () => {
-    try {
-      const data = await userService.getAddresses();
-      setAddresses(data);
-      if (data.length > 0) {
-        const defaultAddress = data.find((a) => a.isDefault) ?? data[0];
-        applyAddress(defaultAddress);
-      } else {
-        setShowManual(true);
-      }
-    } catch {
-      setShowManual(true);
-    }
-  };
 
   const applyAddress = (address: Address) => {
     setSelectedId(address.id);
@@ -60,14 +46,19 @@ export default function DeliveryForm({
     setValue("snapProvince", address.province);
   };
 
+  // Khi chọn địa chỉ có sẵn → báo lên checkout KHÔNG lưu
   const handleSelectAddress = (address: Address) => {
     applyAddress(address);
     setShowManual(false);
+    onSaveAddressChange(false); // ← không lưu địa chỉ mới
   };
 
+  // Khi bấm "Dùng địa chỉ khác" → mới cho phép lưu
   const handleUseManual = () => {
     setSelectedId(null);
     setShowManual(true);
+    setSaveAddress(true);
+    onSaveAddressChange(true); // ← mặc định tick lưu
     setValue("snapFullName", "");
     setValue("snapPhone", "");
     setValue("snapStreet", "");
@@ -75,6 +66,26 @@ export default function DeliveryForm({
     setValue("snapDistrict", "");
     setValue("snapProvince", "");
   };
+
+  // Khi fetch xong có địa chỉ → tắt lưu ngay
+  const fetchAddresses = async () => {
+    try {
+      const data = await userService.getAddresses();
+      setAddresses(data);
+      if (data.length > 0) {
+        const defaultAddress = data.find((a) => a.isDefault) ?? data[0];
+        applyAddress(defaultAddress);
+        onSaveAddressChange(false); // ← đã có địa chỉ, không lưu mới
+      } else {
+        setShowManual(true);
+        onSaveAddressChange(true); // ← chưa có, mặc định lưu
+      }
+    } catch {
+      setShowManual(true);
+      onSaveAddressChange(true);
+    }
+  };
+
 
   const handleSaveAddressChange = (checked: boolean) => {
     setSaveAddress(checked);
