@@ -6,6 +6,7 @@ import {
   Param,
   Body,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { OrderService } from './order.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -31,6 +32,14 @@ export class OrderController {
   @Roles(Role.ADMIN)
   getAllOrders() {
     return this.orderService.getAllOrders();
+  }
+  // Public route — không cần auth vì dùng token
+  @Get('confirm')
+  confirmOrder(@Query('token') token: string, @Query('action') action: string) {
+    return this.orderService.confirmOrder(
+      token,
+      action === 'cancel' ? 'cancel' : 'confirm',
+    );
   }
 
   @Post()

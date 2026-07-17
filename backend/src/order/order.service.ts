@@ -8,16 +8,20 @@ import { CartService } from '../cart/cart.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class OrderService {
   constructor(
     private prisma: PrismaService,
     private cartService: CartService,
+    private emailService: EmailService,
   ) {}
 
   // ── Tạo đơn hàng ──────────────────────────────────
   async createOrder(userId: string, dto: CreateOrderDto) {
+    // ... code cũ giữ nguyên đến bước 5
     // 1. Lấy giỏ hàng hiện tại
     const cart = await this.prisma.cart.findUnique({
       where: { userId }, //
@@ -93,12 +97,13 @@ export class OrderService {
 
       couponId = coupon.id;
     }
-
     const finalAmount = Math.max(0, totalAmount - discountAmount);
 
-    // 5. Tạo Order + OrderItems + Payment trong 1 transaction
+    // Generate confirm token
+    const confirmToken = crypto.randomBytes(32).toString('hex');
+    const confirmExpiredAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+
     const order = await this.prisma.$transaction(async (tx) => {
-      // Tạo order
       const newOrder = await tx.order.create({
         data: {
           userId,
@@ -113,7 +118,8 @@ export class OrderService {
           discountAmount,
           finalAmount,
           note: dto.note,
-          // Tạo OrderItems
+          confirmToken, // ← thêm
+          confirmExpiredAt, // ← thêm
           items: {
             create: cart.items.map((item) => ({
               variantId: item.variantId,
@@ -128,7 +134,6 @@ export class OrderService {
               price: item.variant.price,
             })),
           },
-          // Tạo Payment
           payment: {
             create: {
               method: dto.paymentMethod,
@@ -137,13 +142,9 @@ export class OrderService {
             },
           },
         },
-        include: {
-          items: true,
-          payment: true,
-        },
+        include: { items: true, payment: true },
       });
 
-      // Trừ tồn kho từng variant
       for (const item of cart.items) {
         await tx.productVariant.update({
           where: { id: item.variantId },
@@ -151,7 +152,6 @@ export class OrderService {
         });
       }
 
-      // Tăng usedCount của coupon nếu có
       if (couponId) {
         await tx.coupon.update({
           where: { id: couponId },
@@ -162,10 +162,113 @@ export class OrderService {
       return newOrder;
     });
 
-    // 6. Xóa giỏ hàng sau khi đặt thành công
     await this.cartService.clearCart(userId);
 
+    // Lấy thông tin user để gửi email
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, name: true },
+    });
+
+    // Gửi email xác nhận (không await để không block response)
+    if (user) {
+      this.emailService.sendOrderConfirmationEmail({
+        to: user.email,
+        userName: user.name,
+        orderId: order.id,
+        finalAmount: Number(finalAmount),
+        items: order.items,
+        snapFullName: dto.snapFullName,
+        snapPhone: dto.snapPhone,
+        snapStreet: dto.snapStreet,
+        snapWard: dto.snapWard,
+        snapDistrict: dto.snapDistrict,
+        snapProvince: dto.snapProvince,
+        confirmToken,
+      });
+    }
+
     return order;
+  }
+  // ── Xác nhận đơn hàng qua token ───────────────────
+  async confirmOrder(token: string, action: 'confirm' | 'cancel' = 'confirm') {
+    const order = await this.prisma.order.findUnique({
+      where: { confirmToken: token },
+      include: { items: true },
+    });
+
+    if (!order) throw new NotFoundException('Token không hợp lệ');
+
+    if (order.status !== 'PENDING') {
+      return {
+        success: false,
+        message: `Đơn hàng đã ở trạng thái ${order.status}`,
+        orderId: order.id,
+      };
+    }
+
+    // Kiểm tra hết hạn
+    if (order.confirmExpiredAt && order.confirmExpiredAt < new Date()) {
+      // Tự động hủy nếu quá hạn
+      await this.autoCancelExpiredOrder(order);
+      return {
+        success: false,
+        message: 'Token đã hết hạn, đơn hàng đã bị hủy',
+        orderId: order.id,
+      };
+    }
+
+    if (action === 'cancel') {
+      await this.cancelOrderByToken(order);
+      return {
+        success: true,
+        message: 'Đã hủy đơn hàng',
+        orderId: order.id,
+      };
+    }
+
+    // Xác nhận đơn hàng
+    await this.prisma.order.update({
+      where: { id: order.id },
+      data: {
+        status: 'CONFIRMED',
+        confirmToken: null, // xóa token sau khi dùng
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Xác nhận đơn hàng thành công',
+      orderId: order.id,
+    };
+  }
+
+  private async cancelOrderByToken(order: any) {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.order.update({
+        where: { id: order.id },
+        data: { status: 'CANCELLED', confirmToken: null },
+      });
+
+      // Hoàn lại tồn kho
+      for (const item of order.items) {
+        await tx.productVariant.update({
+          where: { id: item.variantId },
+          data: { stock: { increment: item.quantity } },
+        });
+      }
+
+      if (order.couponId) {
+        await tx.coupon.update({
+          where: { id: order.couponId },
+          data: { usedCount: { decrement: 1 } },
+        });
+      }
+    });
+  }
+
+  private async autoCancelExpiredOrder(order: any) {
+    await this.cancelOrderByToken(order);
   }
 
   // ── Lấy danh sách đơn hàng của user ───────────────

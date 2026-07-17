@@ -120,7 +120,9 @@ export default function CheckoutPage() {
       setOrder(newOrder);
 
       if (paymentMethod === "COD") {
-        toast.success("Đặt hàng thành công!");
+        toast.success(
+          "Đặt hàng thành công 🎉,  vui lòng kiểm tra email để xác nhận đơn hàng nhé!",
+        );
         router.push(`/orders/${newOrder.id}`);
       }
     } catch (error: any) {
