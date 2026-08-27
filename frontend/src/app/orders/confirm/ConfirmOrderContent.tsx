@@ -106,3 +106,6 @@ export default function ConfirmOrderContent() {
     </div>
   );
 }
+
+///postgresql://kai_user:rIUlk6eDe11jfCogUulXdY39qtYw4hHp@dpg-da78fb0ae00c73b1ej10-a.singapore-postgres.render.com/kai_store_8fk5
+//postgresql://kai_user:rIUlk6eDe11jfCogUulXdY39qtYw4hHp@dpg-da78fb0ae00c73b1ej10-a/kai_store_8fk5
