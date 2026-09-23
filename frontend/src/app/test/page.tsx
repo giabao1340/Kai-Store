@@ -1,13 +1,11 @@
-import React from 'react'
-import { ChartBarInteractive } from './ChartBarInteractive'
+import React from "react";
 
 const page = () => {
   return (
     <div>
-<ChartBarInteractive></ChartBarInteractive>
-
+      <h1>Test Page</h1>
     </div>
-  )
-}
+  );
+};
 
-export default page
+export default page;
