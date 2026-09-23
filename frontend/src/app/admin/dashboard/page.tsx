@@ -1,243 +1,205 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import {
-  Package,
-  ShoppingBag,
-  Tag,
-  Ticket,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
-import api from "@/services/api";
-import Link from "next/link";
-import { orderService } from "@/services/order.service";
+import { useEffect, useState } from "react";
 
-interface Stats {
-  totalOrders: number;
-  totalProducts: number;
-  totalBrands: number;
-  totalCoupons: number;
-  recentOrders: any[];
-}
+import { Package, ShoppingCart, Users, DollarSign } from "lucide-react";
 
-const STATUS_CONFIG: Record<
-  string,
-  { label: string; bg: string; text: string }
-> = {
-  PENDING: {
-    label: "Chờ xác nhận",
-    bg: "bg-yellow-50",
-    text: "text-yellow-700",
-  },
-  CONFIRMED: { label: "Đã xác nhận", bg: "bg-blue-50", text: "text-blue-700" },
-  SHIPPING: { label: "Đang giao", bg: "bg-purple-50", text: "text-purple-700" },
-  DELIVERED: { label: "Đã giao", bg: "bg-green-50", text: "text-green-700" },
-  CANCELLED: { label: "Đã hủy", bg: "bg-red-50", text: "text-red-700" },
-};
+import { Button } from "@/components/ui/button";
 
-const PAGE_SIZE = 10;
+import { DashboardRange, DashboardResponse } from "@/types/dashboard";
+
+import { dashboardService } from "@/services/dashboard.service";
+
+import { formatCurrency, formatNumber } from "@/lib/utils";
+
+import { StatCard } from "@/components/admin/dashboard/stat-card";
+
+import { RevenueChart } from "@/components/admin/dashboard/revenue-chart";
+
+import { OrderStatusChart } from "@/components/admin/dashboard/order-status-chart";
+
+import { TopProducts } from "@/components/admin/dashboard/top-products";
+
+import { LowStock } from "@/components/admin/dashboard/low-stock";
+
+import { RecentOrders } from "@/components/admin/dashboard/recent-orders";
+
+import { PaymentMethods } from "@/components/admin/dashboard/payment-methods";
+
+import { BrandRevenueChart } from "@/components/admin/dashboard/brand-revenue";
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [page, setPage] = useState(1);
+  const [range, setRange] = useState<DashboardRange>("30d");
+
+  const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
+
+  const [loading, setLoading] = useState(true);
+
+  const [error, setError] = useState<string | null>(null);
+
+  async function fetchDashboard() {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const data = await dashboardService.getDashboard(range);
+
+      setDashboard(data);
+    } catch (error) {
+      console.error(error);
+
+      setError("Không thể tải dữ liệu dashboard.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    fetchStats();
-  }, []);
+    fetchDashboard();
+  }, [range]);
 
-  const { getAll } = orderService;
-  const fetchStats = async () => {
-    try {
-      const [orders, products, brands, coupons] = await Promise.all([
-        getAll(),
-        api.get<any[]>("/products"),
-        api.get<any[]>("/brands"),
-        api.get<any[]>("/coupons"),
-      ]);
-
-      setStats({
-        totalOrders: orders.length,
-        totalProducts: products.length,
-        totalBrands: brands.length,
-        totalCoupons: coupons.length,
-        recentOrders: orders, // ← lấy hết, phân trang ở dưới
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const recentOrders = stats?.recentOrders ?? [];
-  const totalPages = Math.max(1, Math.ceil(recentOrders.length / PAGE_SIZE));
-  const paginated = useMemo(
-    () => recentOrders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    [recentOrders, page],
-  );
-
-  const STAT_CARDS = [
-    {
-      label: "Đơn hàng",
-      value: stats?.totalOrders,
-      icon: ShoppingBag,
-      bg: "bg-blue-50",
-      text: "text-blue-600",
-      url: "/admin/orders",
-    },
-    {
-      label: "Sản phẩm",
-      value: stats?.totalProducts,
-      icon: Package,
-      bg: "bg-green-50",
-      text: "text-green-600",
-      url: "/admin/products",
-    },
-    {
-      label: "Thương hiệu",
-      value: stats?.totalBrands,
-      icon: Tag,
-      bg: "bg-purple-50",
-      text: "text-purple-600",
-      url: "/admin/brands",
-    },
-    {
-      label: "Mã giảm giá",
-      value: stats?.totalCoupons,
-      icon: Ticket,
-      bg: "bg-orange-50",
-      text: "text-orange-600",
-      url: "/admin/coupons",
-    },
-  ];
-
-  if (isLoading) {
+  if (loading && !dashboard) {
     return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className="h-24 bg-white rounded-2xl border border-gray-100 animate-pulse"
-            />
-          ))}
-        </div>
-        <div className="h-64 bg-white rounded-2xl border border-gray-100 animate-pulse" />
+      <div className="flex min-h-[400px] items-center justify-center">
+        <p className="text-muted-foreground">Đang tải dashboard...</p>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {STAT_CARDS.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Link key={card.label} href={card.url}>
-              <div className="bg-white rounded-2xl border border-gray-100 p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm text-gray-500">{card.label}</p>
-                  <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center ${card.bg}`}
-                  >
-                    <Icon className={`w-4 h-4 ${card.text}`} />
-                  </div>
-                </div>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {card.value ?? 0}
-                </p>
-              </div>
-            </Link>
-          );
-        })}
+  if (error && !dashboard) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500">{error}</p>
+
+          <Button className="mt-4" onClick={fetchDashboard}>
+            Thử lại
+          </Button>
+        </div>
       </div>
+    );
+  }
 
-      {/* Recent orders */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5">
-        <p className="text-sm font-semibold text-gray-900 mb-4">
-          Đơn hàng gần đây
-        </p>
+  if (!dashboard) {
+    return null;
+  }
 
-        {recentOrders.length === 0 ? (
-          <p className="text-sm text-gray-400 py-8 text-center">
-            Chưa có đơn hàng
+  const {
+    kpi,
+    revenue,
+    orderStatus,
+    topProducts,
+    lowStock,
+    recentOrders,
+    paymentMethods,
+    brandRevenue,
+  } = dashboard;
+
+  return (
+    <div className="space-y-6 p-6">
+      {/* HEADER */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+
+          <p className="text-muted-foreground">
+            Tổng quan hoạt động của Kai Store
           </p>
-        ) : (
-          <>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left text-xs font-medium text-gray-400 pb-3">
-                    Mã đơn
-                  </th>
-                  <th className="text-left text-xs font-medium text-gray-400 pb-3">
-                    Khách hàng
-                  </th>
-                  <th className="text-left text-xs font-medium text-gray-400 pb-3">
-                    Tổng tiền
-                  </th>
-                  <th className="text-left text-xs font-medium text-gray-400 pb-3">
-                    Trạng thái
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginated.map((order) => {
-                  const status = STATUS_CONFIG[order.status];
-                  return (
-                    <tr
-                      key={order.id}
-                      className="border-b border-gray-50 last:border-0"
-                    >
-                      <td className="py-3 font-medium">
-                        #{order.id.slice(-8).toUpperCase()}
-                      </td>
-                      <td className="py-3 text-gray-500">
-                        {order.snapFullName}
-                      </td>
-                      <td className="py-3">
-                        {Number(order.finalAmount).toLocaleString("vi-VN")}đ
-                      </td>
-                      <td className="py-3">
-                        <span
-                          className={`text-xs px-2 py-1 rounded-full ${status?.bg} ${status?.text}`}
-                        >
-                          {status?.label}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-100">
-                <p className="text-xs text-gray-400">
-                  Trang {page}/{totalPages} ({recentOrders.length} đơn hàng)
-                </p>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 disabled:opacity-30 transition-colors"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                    className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 disabled:opacity-30 transition-colors"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
+        <div className="flex gap-2">
+          {[
+            ["7d", "7 ngày"],
+            ["30d", "30 ngày"],
+            ["3m", "3 tháng"],
+            ["6m", "6 tháng"],
+            ["1y", "1 năm"],
+          ].map(([value, label]) => (
+            <Button
+              key={value}
+              variant={range === value ? "default" : "outline"}
+              size="sm"
+              onClick={() => setRange(value as DashboardRange)}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+      </div>
+      {/* KPI */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Doanh thu"
+          value={formatCurrency(kpi.revenue)}
+          growth={kpi.revenueGrowth}
+          icon={<DollarSign className="h-5 w-5" />}
+        />
+
+        <StatCard
+          title="Đơn hàng"
+          value={formatNumber(kpi.orders)}
+          growth={kpi.ordersGrowth}
+          icon={<ShoppingCart className="h-5 w-5" />}
+        />
+
+        <StatCard
+          title="Khách hàng mới"
+          value={formatNumber(kpi.customers)}
+          growth={kpi.customersGrowth}
+          icon={<Users className="h-5 w-5" />}
+        />
+
+        <StatCard
+          title="Sản phẩm"
+          value={formatNumber(kpi.products)}
+          icon={<Package className="h-5 w-5" />}
+        />
+      </div>
+      {/* EXTRA KPI */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <StatCard
+          title="Giá trị đơn trung bình"
+          value={formatCurrency(kpi.averageOrderValue)}
+          icon={<ShoppingCart className="h-5 w-5" />}
+        />
+
+        <StatCard
+          title="Sản phẩm sắp hết"
+          value={formatNumber(kpi.lowStockProducts)}
+          icon={<Package className="h-5 w-5" />}
+        />
+
+        <StatCard
+          title="Hết hàng"
+          value={formatNumber(kpi.outOfStockProducts)}
+          icon={<Package className="h-5 w-5" />}
+        />
+      </div>
+      {/* CHARTS */}
+      <div className="grid gap-6 lg:grid-cols-3 min-w-0">
+        <div className="lg:col-span-2">
+          <RevenueChart data={revenue} />
+        </div>
+
+        <OrderStatusChart data={orderStatus} />
+      </div>
+      {/* PRODUCTS */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <TopProducts data={topProducts} />
+        </div>
+
+        <LowStock data={lowStock} />
+      </div>
+      {/* ORDERS */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <RecentOrders data={recentOrders} />
+
+        <PaymentMethods data={paymentMethods} />
+      </div>
+      {/* BRAND */}
+      <div>
+        <BrandRevenueChart data={brandRevenue} />
       </div>
     </div>
   );

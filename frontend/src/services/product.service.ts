@@ -8,6 +8,10 @@ export interface ProductQuery {
   isFeatured?: string;
   brandId?: string;
   categoryId?: string;
+
+  minPrice?: string;
+  maxPrice?: string;
+
   page?: string;
   limit?: string;
 }
@@ -25,24 +29,72 @@ export async function fetchProducts(
 ): Promise<PaginatedProducts> {
   try {
     const params = new URLSearchParams();
-    if (query?.search) params.set("search", query.search);
-    if (query?.isFeatured) params.set("isFeatured", query.isFeatured);
-    if (query?.brandId) params.set("brandId", query.brandId);
-    if (query?.categoryId) params.set("categoryId", query.categoryId);
-    if (query?.page) params.set("page", query.page);
-    if (query?.limit) params.set("limit", query.limit);
+
+    if (query?.search) {
+      params.set("search", query.search);
+    }
+
+    if (query?.isFeatured) {
+      params.set("isFeatured", query.isFeatured);
+    }
+
+    if (query?.brandId) {
+      params.set("brandId", query.brandId);
+    }
+
+    if (query?.categoryId) {
+      params.set("categoryId", query.categoryId);
+    }
+
+    // Price filter
+    if (query?.minPrice) {
+      params.set("minPrice", query.minPrice);
+    }
+
+    if (query?.maxPrice) {
+      params.set("maxPrice", query.maxPrice);
+    }
+
+    if (query?.page) {
+      params.set("page", query.page);
+    }
+
+    if (query?.limit) {
+      params.set("limit", query.limit);
+    }
 
     const url = `${BASE_URL}/products?${params.toString()}`;
-    const res = await fetch(url, { next: { revalidate: 60 } });
-    if (!res.ok)
-      return { items: [], total: 0, page: 1, limit: 12, totalPages: 1 };
+
+    const res = await fetch(url, {
+      next: {
+        revalidate: 60,
+      },
+    });
+
+    if (!res.ok) {
+      return {
+        items: [],
+        total: 0,
+        page: 1,
+        limit: 12,
+        totalPages: 1,
+      };
+    }
+
     const data = await res.json();
+
     return {
       ...data,
       items: Array.isArray(data.items) ? data.items : [],
-    }; // fix bug
+    };
   } catch {
-    return { items: [], total: 0, page: 1, limit: 12, totalPages: 1 };
+    return {
+      items: [],
+      total: 0,
+      page: 1,
+      limit: 12,
+      totalPages: 1,
+    };
   }
 }
 

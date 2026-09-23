@@ -52,6 +52,7 @@ export default function ReviewList({ productId, refresh }: ReviewListProps) {
       </div>
     );
   }
+  console.log("Reviews fetched:", reviews.length);
 
   if (reviews.length === 0) {
     return (

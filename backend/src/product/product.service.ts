@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -38,34 +39,114 @@ export class ProductService {
     isFeatured?: string;
     brandId?: string;
     categoryId?: string;
+    minPrice?: string;
+    maxPrice?: string;
     page?: string;
     limit?: string;
-    includeHidden?: string; // ← thêm
+    includeHidden?: string;
   }) {
-    const page = query.page ? parseInt(query.page) : 1;
-    const limit = query.limit ? parseInt(query.limit) : 12;
+    const page = query.page ? parseInt(query.page, 10) : 1;
+    const limit = query.limit ? parseInt(query.limit, 10) : 12;
     const skip = (page - 1) * limit;
 
+    const minPrice =
+      query.minPrice !== undefined ? Number(query.minPrice) : undefined;
+
+    const maxPrice =
+      query.maxPrice !== undefined ? Number(query.maxPrice) : undefined;
+
+    // Validate price
+    if (
+      minPrice !== undefined &&
+      (!Number.isFinite(minPrice) || minPrice < 0)
+    ) {
+      throw new BadRequestException('Giá tối thiểu không hợp lệ');
+    }
+
+    if (
+      maxPrice !== undefined &&
+      (!Number.isFinite(maxPrice) || maxPrice < 0)
+    ) {
+      throw new BadRequestException('Giá tối đa không hợp lệ');
+    }
+
+    if (
+      minPrice !== undefined &&
+      maxPrice !== undefined &&
+      minPrice > maxPrice
+    ) {
+      throw new BadRequestException(
+        'Giá tối thiểu không được lớn hơn giá tối đa',
+      );
+    }
+
+    const priceFilter =
+      minPrice !== undefined || maxPrice !== undefined
+        ? {
+            variants: {
+              some: {
+                price: {
+                  ...(minPrice !== undefined && {
+                    gte: minPrice,
+                  }),
+                  ...(maxPrice !== undefined && {
+                    lte: maxPrice,
+                  }),
+                },
+              },
+            },
+          }
+        : {};
+
     const where = {
-      // ← chỉ filter isActive khi KHÔNG phải admin
-      ...(query.includeHidden !== 'true' && { isActive: true }),
-      ...(query.search && {
-        name: { contains: query.search, mode: 'insensitive' as const },
+      ...(query.includeHidden !== 'true' && {
+        isActive: true,
       }),
-      ...(query.isFeatured === 'true' && { isFeatured: true }),
-      ...(query.brandId && { brandId: query.brandId }),
-      ...(query.categoryId && { categoryId: query.categoryId }),
+
+      ...(query.search && {
+        name: {
+          contains: query.search,
+          mode: 'insensitive' as const,
+        },
+      }),
+
+      ...(query.isFeatured === 'true' && {
+        isFeatured: true,
+      }),
+
+      ...(query.brandId && {
+        brandId: query.brandId,
+      }),
+
+      ...(query.categoryId && {
+        categoryId: query.categoryId,
+      }),
+
+      ...priceFilter,
     };
 
     const [items, total] = await Promise.all([
       this.prisma.product.findMany({
         where,
-        include: { brand: true, category: true, variants: true, images: true },
-        orderBy: { createdAt: 'desc' },
+
+        include: {
+          brand: true,
+          category: true,
+          variants: true,
+          images: true,
+        },
+
+        orderBy: {
+          createdAt: 'desc',
+        },
+
         skip,
         take: limit,
       }),
-      this.prisma.product.count({ where }),
+
+      this.prisma.product.count({
+        where,
+      }),
     ]);
 
     return {

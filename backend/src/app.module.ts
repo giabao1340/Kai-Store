@@ -18,6 +18,8 @@ import { PaymentModule } from './payment/payment.module';
 import { UserModule } from './user/user.module';
 import { BannerModule } from './banner/banner.module';
 import { EmailModule } from './email/email.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -50,6 +52,8 @@ import { EmailModule } from './email/email.module';
     UserModule,
     BannerModule,
     EmailModule,
+    DashboardModule,
+    AiModule,
   ],
   providers: [
     {
