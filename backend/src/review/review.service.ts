@@ -65,7 +65,7 @@ export class ReviewService {
         throw new BadRequestException('Sản phẩm không thuộc đơn hàng này');
       }
 
-      isVerified = false;
+      isVerified = true;
     }
 
     // 3. Tạo review với productId thật
@@ -182,4 +182,3 @@ export class ReviewService {
     });
   }
 }
-

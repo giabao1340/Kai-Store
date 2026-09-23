@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import useAuthStore from "@/stores/auth.store";
 import AdminSidebar from "./_components/admin-sidebar";
 import AdminHeader from "./_components/admin-header";
+import AdminGuard from "./_components/admin-guard";
 
 export default function AdminLayout({
   children,
@@ -13,7 +14,6 @@ export default function AdminLayout({
 }) {
   const router = useRouter();
   const { isAuthenticated, user } = useAuthStore();
-
   useEffect(() => {
     if (!isAuthenticated) {
       router.push("/auth");
@@ -23,7 +23,6 @@ export default function AdminLayout({
   }, [isAuthenticated, user]);
 
   if (!isAuthenticated || user?.role !== "ADMIN") return null;
-
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       <AdminSidebar />
@@ -33,4 +32,5 @@ export default function AdminLayout({
       </div>
     </div>
   );
+
 }

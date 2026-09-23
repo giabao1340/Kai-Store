@@ -347,26 +347,67 @@ export class OrderService {
   }
 
   // ── Admin: Cập nhật trạng thái đơn hàng ───────────
+
   async updateOrderStatus(orderId: string, status: OrderStatus) {
-    const order = await this.prisma.order.findUnique({
-      where: { id: orderId },
-    });
-    if (!order) throw new NotFoundException('Đơn hàng không tồn tại');
+    return this.prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: {
+          payment: true,
+        },
+      });
 
-    // Không thể chuyển ngược trạng thái
-    const flow = ['PENDING', 'CONFIRMED', 'SHIPPING', 'DELIVERED'];
-    const currentIndex = flow.indexOf(order.status);
-    const newIndex = flow.indexOf(status);
+      if (!order) {
+        throw new NotFoundException('Đơn hàng không tồn tại');
+      }
 
-    if (newIndex !== -1 && newIndex < currentIndex) {
-      throw new BadRequestException(
-        'Không thể chuyển ngược trạng thái đơn hàng',
-      );
-    }
+      // Không thể chuyển ngược trạng thái
+      const flow: OrderStatus[] = [
+        'PENDING',
+        'CONFIRMED',
+        'SHIPPING',
+        'DELIVERED',
+      ];
 
-    return this.prisma.order.update({
-      where: { id: orderId },
-      data: { status },
+      const currentIndex = flow.indexOf(order.status);
+      const newIndex = flow.indexOf(status);
+
+      if (newIndex !== -1 && newIndex < currentIndex) {
+        throw new BadRequestException(
+          'Không thể chuyển ngược trạng thái đơn hàng',
+        );
+      }
+
+      // Cập nhật trạng thái đơn hàng
+      const updatedOrder = await tx.order.update({
+        where: {
+          id: orderId,
+        },
+        data: {
+          status,
+        },
+      });
+
+      // COD: khi giao hàng thành công => đã thu tiền
+
+      const check =
+        status === 'DELIVERED' &&
+        order.payment?.method === 'COD' &&
+        order.payment.status !== 'PAID';
+      console.log('check update payment status:', check);
+      if (check) {
+        await tx.payment.update({
+          where: {
+            orderId: order.id,
+          },
+          data: {
+            status: 'PAID',
+            paidAt: new Date(),
+          },
+        });
+      }
+
+      return updatedOrder;
     });
   }
 

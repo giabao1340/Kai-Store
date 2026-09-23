@@ -346,3 +346,5 @@ model Banner {
 
   @@map("banners")
 }
+
+
